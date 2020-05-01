@@ -9,12 +9,9 @@ const connection = mysql.createConnection({
     database: "employable_db"
 });
 
-connection.connect(function (err) {
-    if (err) throw err;
-    console.log("connected as id " + connection.threadId);
-});
 
-const init = function() {
+
+const init = function () {
     inquirer.prompt(
         {
             type: "list",
@@ -24,7 +21,7 @@ const init = function() {
                 {
                     name: "Go to departments subscreen.",
                     value: "departments"
-                }, 
+                },
                 {
                     name: "Go to employees subscreen.",
                     value: "employees"
@@ -32,6 +29,10 @@ const init = function() {
                 {
                     name: "Go to roles subscreen.",
                     value: "roles"
+                },
+                {
+                    name: "Exit program.",
+                    value: "exit"
                 }
             ]
         }
@@ -47,7 +48,9 @@ const init = function() {
                 roles();
                 break;
             default:
-                console.log("How'd you break this?");
+                console.log("Ending connection to database...");
+                connection.end();
+                console.log("Connection terminated.")
                 return;
         }
     })
@@ -73,7 +76,7 @@ function departments() {
                 {
                     name: "Add a department.",
                     value: "add"
-                }
+                },
             ]
         }
     ).then(answer => {
@@ -92,8 +95,8 @@ function departments() {
     // view, edit, or add departments
 }
 
-function viewDept(){
-    connection.query("SELECT * FROM department", function(err, res) {
+function viewDept() {
+    connection.query("SELECT * FROM department", function (err, res) {
         if (err) throw err
         console.table(res)
         inquirer.prompt(
@@ -125,10 +128,62 @@ function viewDept(){
                     init();
                     break;
                 default:
+                    connection.end();
                     return;
             }
         })
     })
 }
 
-init();
+function editDept() {
+    connection.query("SELECT * FROM department", function (err, res) {
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Which department would you like to edit?",
+                name: "department",
+                choices: res.map(department => {
+                    return {
+                        name: department.name,
+                        value: department.id
+                    }
+                })
+            }
+        ]).then(answerOne => {
+            inquirer.prompt([{
+                type: "input",
+                name: "newName",
+                message: "What would you like to change the department name to?"
+            }]).then(answerTwo => {
+                connection.query("UPDATE department SET ? WHERE ?", [{ name: answerTwo.newName }, { id: answerOne.department }], (err, deptData) => {
+                    console.log(deptData.affectedRows + " department updated!");
+                    init();
+                })
+            })
+        })
+
+    })
+}
+
+function addDept() {
+    inquirer.prompt([
+        {
+            type: "input",
+            message: "What is the name of your new department?",
+            name: "newDept"
+        }
+    ]).then(answer => {
+        connection.query("INSERT INTO department SET ?", {name: answer.newDept}, (err, deptData) => {
+            if (err) throw err;
+            console.log(deptData.insertId + " is the ID of the new department.");
+            init();
+        })
+    })
+}
+
+
+connection.connect(function (err) {
+    if (err) throw err;
+    console.log("connected as id " + connection.threadId);
+    init();
+});
