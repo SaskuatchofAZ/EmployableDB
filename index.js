@@ -509,7 +509,7 @@ function editEmployee() {
                     }]).then(answerTwo => {
                         connection.query("UPDATE employee SET ? WHERE ?", [{ first_name: answerTwo.newFirstName }, { id: answerOne.id }], (err, response) => {
                             if (err) throw err;
-                            console.log(response.affectedRows);
+                            console.log(response.affectedRows + " row changed!");
                             init();
                         })
                     })
@@ -521,7 +521,7 @@ function editEmployee() {
                     }]).then(answerTwo => {
                         connection.query("UPDATE employee SET ? WHERE ?", [{ last_name: answerTwo.newLastName }, { id: answerOne.id }], (err, response) => {
                             if (err) throw err;
-                            console.log(response.affectedRows);
+                            console.log(response.affectedRows + " row changed!");
                             init();
                         })
                     })
@@ -540,7 +540,7 @@ function editEmployee() {
                         }]).then(answerTwo => {
                             connection.query("UPDATE employee SET ? WHERE ?", [{ role_id: answerTwo.newRole }, { id: answerOne.id }], function (err, updateData) {
                                 if (err) throw err;
-                                console.log(updateData.affectedRows);
+                                console.log(updateData.affectedRows + " row changed!");
                                 init();
                             })
 
@@ -564,13 +564,81 @@ function editEmployee() {
                         ]).then(answerTwo => {
                             connection.query("UPDATE employee SET ? WHERE ?", [{ manager_id: answerTwo.newManager }, { id: answerOne.id }], function (error, managerData) {
                                 if (err) throw err;
-                                console.log(managerData.affectedRows);
+                                console.log(managerData.affectedRows  + " row changed!");
                                 init();
                             })
                         })
                     })
                 }
 
+            })
+        })
+    })
+}
+
+function addEmployee() {
+    inquirer.prompt([
+        {
+            type: "input",
+            message: "What is the employee's first name?",
+            name: "firstName"
+        },
+        {
+            type: "input",
+            message: "What is the employee's last name?",
+            name: "lastName"
+        }
+    ]).then(answerOne => {
+        connection.query("SELECT * FROM role", function(err, res) {
+            if (err) throw err
+            inquirer.prompt([
+                {
+                    type: "list",
+                    name: "roleChoice",
+                    message: "What is the employee's role?",
+                    choices: res.map(role => {
+                        return {
+                            name: role.title,
+                            value: role.id
+                        }
+                    })
+                }
+            ]).then(answerTwo => {
+                connection.query("SELECT * FROM employee", function(err, response) {
+                    managerChoices = response.map(employee => {
+                        return {
+                            name: employee.first_name + " " + employee.last_name,
+                            value: employee.id
+                        }
+                    });
+                    nullManager = {
+                        name: "No manager",
+                        value: null
+                    };
+                    managerChoices.push(nullManager);
+                    inquirer.prompt([
+                        {
+                            type: "list",
+                            name: "manager",
+                            message: "Who is the employee's manager?",
+                            choices: managerChoices
+                        }
+                    ]).then(answerThree => {
+                        connection.query("INSERT INTO employee SET ?", 
+                            {
+                                first_name: answerOne.firstName,
+                                last_name: answerOne.lastName,
+                                role_id: answerTwo.roleChoice,
+                                manager_id: answerThree.manager
+                            },
+                            function (err, insertData) {
+                                if (err) throw err;
+                                console.log("New employee is ID #" + insertData.insertId);
+                                init();
+                            }
+                        )
+                    })
+                })
             })
         })
     })
